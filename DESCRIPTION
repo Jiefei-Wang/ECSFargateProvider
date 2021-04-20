@@ -1,0 +1,25 @@
+Package: ECSFargateProvider
+Title: The ECS Fargate cloud provider for the DockerParallel package
+Version: 0.99.0
+Authors@R: 
+    person(given = "Jiefei",
+           family = "Wang",
+           role = c("aut", "cre"),
+           email = "szwjf08@gmail.com")
+Description: Providing the implementation for the ECS Fargate cloud provider.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.1
+Imports:
+    aws.ecx,
+    methods,
+    DockerParallel,
+    jsonlite,
+    utils
+Suggests: 
+    knitr,
+    rmarkdown,
+    testthat
+VignetteBuilder: knitr
