@@ -26,7 +26,7 @@ runTask <- function(clusterName, taskDefName, taskCount,
     )
     ## handling the network error and prevent
     ## the container from duplicating.
-    tryNum <- 5
+    tryNum <- aws.ecx::aws_get_retry_time()
     startedBy <- generateRandomPassword(30)
     response <- NULL
     ids <- NULL
