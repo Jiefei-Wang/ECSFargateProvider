@@ -30,7 +30,7 @@ runTask <- function(clusterName, taskDefName, taskCount,
     startedBy <- generateRandomPassword(30)
     response <- NULL
     ids <- NULL
-    for(i in seq_along(tryNum)){
+    for(i in seq_len(tryNum)){
         response <-
             tryCatch(
                 ecs_run_task(cluster = clusterName,
