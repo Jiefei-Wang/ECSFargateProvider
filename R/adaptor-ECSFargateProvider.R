@@ -8,6 +8,12 @@
 #' @export
 setMethod("initializeProvider", "ECSFargateProvider", function(provider, cluster, verbose){
     if(!provider$initialized){
+        if(!existCredentials()){
+            stop(
+                paste0("The AWS credentials do not exist, please set them via <aws.ecx::aws_set_credentials>\n",
+                       "The general information can be found at https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html")
+            )
+        }
         if(!cluster$isServerRunning()){
             .setServerWorkerSameLAN(cluster, TRUE)
         }
@@ -237,6 +243,13 @@ setMethod("killDockerInstances", "ECSFargateProvider",
 #' @export
 setMethod("dockerClusterExists", "ECSFargateProvider",
           function(provider, cluster, verbose = 0L){
+              ## Check if the cluster exists
+              clusterList <- listClusters()
+              if(!provider$clusterName%in%clusterList){
+                  return(FALSE)
+              }
+
+              ## Check if the server exists
               serverHandles <- listRunningServer(cluster)
               serverInfo <- findServerInfo(cluster, serverHandles)
               !is.null(serverInfo)

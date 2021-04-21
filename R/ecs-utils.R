@@ -204,3 +204,9 @@ verbosePrint<-function(verbose, ...){
 generateRandomPassword <- function(len = 26){
   paste0(letters[sample(26, len, replace = TRUE)],collapse = "")
 }
+
+
+existCredentials <- function(){
+  !is.null(aws.ecx::aws_get_secret_access_key())&&
+    !is.null(aws.ecx::aws_get_access_key_id())
+}

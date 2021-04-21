@@ -21,5 +21,6 @@ Imports:
 Suggests: 
     knitr,
     rmarkdown,
-    testthat
+    testthat,
+    BiocFEDRContainer
 VignetteBuilder: knitr
