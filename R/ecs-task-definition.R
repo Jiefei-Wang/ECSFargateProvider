@@ -1,4 +1,7 @@
-CreateTaskDefinition <- function(taskName, name, image, cpu = 256, memory = 512){
+CreateTaskDefinition <- function(taskDefName, name, image,
+                                 logConfiguration = NULL,
+                                 executionRoleArn = NULL,
+                                 cpu = 256, memory = 512){
     if(is.null(name)){
         name <- "container"
     }
@@ -7,12 +10,15 @@ CreateTaskDefinition <- function(taskName, name, image, cpu = 256, memory = 512)
         image=image,
         essential = TRUE
     ))
-    response <- ecs_register_task_definition(family=taskName,
-                                             cpu = as.character(cpu),
+    containerDefinitions[[1]]$logConfiguration <- logConfiguration
+    # containerDefinitions[[1]]$ExecutionRoleArn <- taskExecRole
+    response <- ecs_register_task_definition(family=taskDefName,
+                                             cpu = as.character(256),
                                              memory = as.character(memory),
                                              containerDefinitions = containerDefinitions,
                                              networkMode = "awsvpc",
-                                             requiresCompatibilities = "FARGATE"
+                                             requiresCompatibilities = "FARGATE",
+                                             executionRoleArn  = executionRoleArn
     )
     response$taskDefinitionArn
 }
@@ -65,22 +71,41 @@ configTaskDefinitionInternal <- function(x, taskNameSlot, container){
             idx <- which.max(definitionList$version)
             taskInfo <- describeTaskDefinition(taskDefName, definitionList$version[idx])
 
+            containerDef <- taskInfo$containerDefinitions[[1]]
             nameCheck <- identical(
-                taskInfo$containerDefinitions[[1]]$name,
+                containerDef$name,
                 container$name
                 )
             imageCheck <- identical(
-                taskInfo$containerDefinitions[[1]]$image,
+                containerDef$image,
                 container$image)
-
-            needDef <- !all(nameCheck, imageCheck)
+            executionRoleArn <- NULL
+            logConfig <- NULL
+            if(x$logDriver!="none"){
+                logConfig <- getLogJson(x,taskDefName)
+                logCheck <- identical(
+                    containerDef$logConfiguration$logDriver,logConfig$logDriver)&&
+                    listSetEqual(containerDef$logConfiguration$options,
+                                 logConfig$options)
+                if(logConfig$logDriver=="awslogs"){
+                    executionRoleArn <- configTaskExecRoleArn(x)
+                    if(is.null(executionRoleArn)){
+                        stop("Fail to find the task execution role required by the awslogs")
+                    }
+                }
+            }else{
+                logCheck <- TRUE
+            }
+            needDef <- !all(nameCheck, imageCheck, logCheck)
         }
 
         if(needDef){
             CreateTaskDefinition(
-                taskName = taskDefName,
+                taskDefName = taskDefName,
                 name = container$name,
-                image =  container$image
+                image =  container$image,
+                logConfiguration=logConfig,
+                executionRoleArn=executionRoleArn
             )
         }
         x$field(verifySlot, TRUE)

@@ -17,7 +17,8 @@ Imports:
     methods,
     DockerParallel,
     jsonlite,
-    utils
+    utils,
+    aws.iam
 Suggests: 
     knitr,
     rmarkdown,

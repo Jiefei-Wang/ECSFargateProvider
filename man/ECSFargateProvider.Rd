@@ -14,7 +14,7 @@ ECSFargateProvider(
   securityGroupId = NULL,
   internetGatewayId = NULL,
   routeTableId = NULL,
-  workerPublicIpEnable = TRUE
+  enableWorkerPublicIp = TRUE
 )
 }
 \arguments{
@@ -28,7 +28,7 @@ the server and worker}
 \item{vpcId, subnetId, securityGroupId, internetGatewayId, routeTableId}{The ID of
 the network settings for the container}
 
-\item{workerPublicIpEnable}{Logical, whether to enable the public IP for the worker.
+\item{enableWorkerPublicIp}{Logical, whether to enable the public IP for the worker.
 If this value is \code{FALSE}, the worker will not be able to pull the container image from the
 public network}
 }

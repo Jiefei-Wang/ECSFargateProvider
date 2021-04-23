@@ -16,7 +16,8 @@
         securityGroupId = "CharOrNULL",
         internetGatewayId = "CharOrNULL",
         routeTableId = "CharOrNULL",
-        workerPublicIpEnable = "logical",
+        taskExecRoleArn = "CharOrNULL",
+        enableWorkerPublicIp = "logical",
         clusterNameVerified = "logical",
         serverTaskDefNameVerified = "logical",
         workerTaskDefNameVerified = "logical",
@@ -27,7 +28,12 @@
         routeTableVerified = "logical",
         routeVerified = "logical",
         inboundPermissionVerified = "logical",
-        initialized = "logical"
+        taskExecRoleArnVerified = "logical",
+        initialized = "logical",
+        enableLogs = "logical",
+        logDriver = "character",
+        logOptions = "list",
+        region = "character"
     ),
     contains = "CloudProvider"
 )

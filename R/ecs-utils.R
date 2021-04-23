@@ -210,3 +210,45 @@ existCredentials <- function(){
   !is.null(aws.ecx::aws_get_secret_access_key())&&
     !is.null(aws.ecx::aws_get_access_key_id())
 }
+
+listSetEqual<-function(x,y){
+  if(length(x)!=length(y)){
+    return(FALSE)
+  }
+  if(length(x)==0){
+    return(TRUE)
+  }
+  if(setequal(names(x),names(y))){
+      for(i in names(x)){
+        if(!identical(x[[i]],y[[i]])){
+          return(FALSE)
+        }
+      }
+    TRUE
+  }else{
+    FALSE
+  }
+}
+
+getLogJson <- function(x,taskDefName){
+  if(x$logDriver!="none"){
+    if(x$logDriver=="auto"){
+      driver <- "awslogs"
+      driverOpts <- list(
+        `awslogs-group` = paste0("/ecs/", taskDefName),
+        `awslogs-region` = x$region,
+        `awslogs-stream-prefix` = "ecs",
+        `awslogs-create-group` = "true"
+      )
+    }else{
+      driver <- x$logDriver
+      driverOpts <- x$logOptions
+    }
+    list(
+      logDriver = driver,
+      options = driverOpts
+    )
+  }else{
+    NULL
+  }
+}

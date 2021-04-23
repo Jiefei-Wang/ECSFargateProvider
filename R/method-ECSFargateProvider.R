@@ -9,7 +9,7 @@
 #' @param securityGroupName Character, the security group name
 #' @param vpcId,subnetId,securityGroupId,internetGatewayId,routeTableId The ID of
 #' the network settings for the container
-#' @param workerPublicIpEnable Logical, whether to enable the public IP for the worker.
+#' @param enableWorkerPublicIp Logical, whether to enable the public IP for the worker.
 #' If this value is `FALSE`, the worker will not be able to pull the container image from the
 #' public network
 #' @export
@@ -22,7 +22,12 @@ ECSFargateProvider <- function(clusterName = "R-worker-cluster",
                                securityGroupId = NULL,
                                internetGatewayId = NULL,
                                routeTableId = NULL,
-                               workerPublicIpEnable = TRUE){
+                               taskExecRoleArn = NULL,
+                               enableWorkerPublicIp = TRUE,
+                               enableLogs = TRUE,
+                               logDriver = c("none", "auto","awslogs", "awsfirelens","splunk"),
+                               logOptions = list(),
+                               region = aws.ecx::aws_get_region()){
     .ECSFargateProvider$new(
         clusterName = clusterName,
         serverTaskDefName = serverTaskDefName,
@@ -33,7 +38,8 @@ ECSFargateProvider <- function(clusterName = "R-worker-cluster",
         securityGroupId = securityGroupId,
         internetGatewayId = internetGatewayId,
         routeTableId = routeTableId,
-        workerPublicIpEnable=workerPublicIpEnable,
+        enableWorkerPublicIp=enableWorkerPublicIp,
+        taskExecRoleArn = taskExecRoleArn,
         clusterNameVerified = FALSE,
         serverTaskDefNameVerified = FALSE,
         workerTaskDefNameVerified = FALSE,
@@ -44,7 +50,12 @@ ECSFargateProvider <- function(clusterName = "R-worker-cluster",
         routeTableVerified = FALSE,
         routeVerified = FALSE,
         inboundPermissionVerified = FALSE,
-        initialized = FALSE
+        taskExecRoleArnVerified = FALSE,
+        initialized = FALSE,
+        enableLogs = enableLogs,
+        logDriver = match.arg(logDriver),
+        logOptions = logOptions,
+        region=region
     )
 }
 
@@ -73,7 +84,5 @@ ECSFargateProvider <- function(clusterName = "R-worker-cluster",
         invisible(NULL)
     }
 )
-
-
 
 
