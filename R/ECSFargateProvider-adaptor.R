@@ -20,40 +20,45 @@ setMethod("initializeProvider", "ECSFargateProvider", function(provider, cluster
         verbosePrint(verbose, "Initializing the ECS provider")
         ## Cluster name
         verbosePrint(verbose>1, "\tSetting up cluster")
-        clusterName <- configClusterName(provider)
+        clusterName <- configClusterName(provider, region = provider$region)
         verbosePrint(verbose>1, "\tCluster name: \t", clusterName)
         ## VPC
         verbosePrint(verbose>1, "\tSetting up VPC")
-        VPCId <- configVpcId(provider)
+        VPCId <- configVpcId(provider, region = provider$region)
         verbosePrint(verbose>1, "\tVPC: \t", VPCId)
         ## subnet
         verbosePrint(verbose>1, "\tSetting up subnet")
-        subnetId <- configSubnetId(provider)
+        subnetId <- configSubnetId(provider, region = provider$region)
         verbosePrint(verbose>1, "\tSubnet id: \t", subnetId)
         ## gateway
         verbosePrint(verbose>1, "\tSetting up gateway")
-        gatewayId <- configInternetGateway(provider)
+        gatewayId <- configInternetGateway(provider, region = provider$region)
         verbosePrint(verbose>1, "\tGateway: \t", gatewayId)
         ## route table
         verbosePrint(verbose>1, "\tSetting up route table")
-        routeTableId <- configRouteTable(provider)
+        routeTableId <- configRouteTable(provider, region = provider$region)
         verbosePrint(verbose>1, "\tRoute table: \t", routeTableId)
         ## route
         verbosePrint(verbose>1, "\tSetting up default route")
-        configDefaultRoute(provider)
+        configDefaultRoute(provider, region = provider$region)
         verbosePrint(verbose>1, "\tDefault route finished")
         ## security group
         verbosePrint(verbose>1, "\tSetting up security group")
-        securityGroupId <- configSecurityGroup(provider)
+        securityGroupId <- configSecurityGroup(provider, region = provider$region)
         verbosePrint(verbose>1, "\tSecurity group: ",securityGroupId)
         # Inbound permission
         verbosePrint(verbose>1, "\tSetting up SSH and server-worker inbound permission")
         port <- c(22, cluster@cloudConfig$serverPort)
-        ConfigInboundPermissions(provider, port)
+        ConfigInboundPermissions(x = provider, ports = port, region = provider$region)
         verbosePrint(verbose>1, "\tInbound permission finished")
+
+        # Task execution role
+        verbosePrint(verbose>1, "\tSetting up task execution role")
+        roleArn <- configTaskExecRole(provider)
+        verbosePrint(verbose>1, "\tTask execution role:", roleArn)
         # Task definition
         verbosePrint(verbose>1, "\tSetting up task defintion")
-        configTaskDefinition(provider, cluster)
+        configTaskDefinition(provider, cluster, region = provider$region)
         verbosePrint(verbose>1, "\tTask defintion finished")
         provider$initialized <- TRUE
     }

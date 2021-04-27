@@ -6,7 +6,8 @@ runTask <- function(clusterName, taskDefName, taskCount,
                     cpu, memory,
                     securityGroupId,
                     subnetId,
-                    enablePublicIp = TRUE
+                    enablePublicIp = TRUE,
+                    ...
 ){
     stopifnot(taskCount<=10)
     envJson <- environmentToJSON(container$environment)
@@ -41,12 +42,13 @@ runTask <- function(clusterName, taskDefName, taskCount,
                              networkConfiguration=networkConfiguration,
                              overrides=overrides,
                              startedBy = startedBy,
-                             retry_time = 0
+                             retry_time = 0,
+                             ...
                 ),
                 error = function(e) {message(e);NULL}
             )
         if(is.null(response)){
-            ids <- listTasks(clusterName = clusterName, startedBy = startedBy)
+            ids <- listTasks(clusterName = clusterName, startedBy = startedBy, ...)
             if(length(ids)!=0){
                 break
             }
@@ -62,20 +64,21 @@ runTask <- function(clusterName, taskDefName, taskCount,
 listTasks<-function(clusterName,
                     status = c("RUNNING", "STOPPED"),
                     taskFamily = NULL,
-                    startedBy = NULL){
+                    startedBy = NULL,
+                    ...){
     if(!is.null(status)){
         status <- match.arg(status)
     }
     response <- ecs_list_tasks(cluster=clusterName, desiredStatus = status,
-                               family = taskFamily, startedBy=startedBy)
+                               family = taskFamily, startedBy=startedBy, ...)
     response
 }
 
-stopTasks <- function(clusterName, taskIds){
+stopTasks <- function(clusterName, taskIds, ...){
     result <- rep(TRUE, length(taskIds))
     for(i in seq_along(taskIds)){
         tryCatch(
-            ecs_stop_task(cluster = clusterName, task = taskIds[[i]]),
+            ecs_stop_task(cluster = clusterName, task = taskIds[[i]], ...),
             error = function(e) result[i] <<- FALSE
 
         )
@@ -84,9 +87,9 @@ stopTasks <- function(clusterName, taskIds){
 }
 
 
-getTaskDetails<-function(clusterName, taskIds, getIP = FALSE){
+getTaskDetails<-function(clusterName, taskIds, getIP = FALSE, ...){
     response <- ecs_describe_tasks(cluster = clusterName,
-                                   tasks=taskIds)
+                                   tasks=taskIds, ...)
 
     taskIds <- vapply(response$tasks,function(x)x$taskArn, character(1))
     status <- vapply(response$tasks,function(x)x$lastStatus, character(1))
@@ -105,7 +108,7 @@ getTaskDetails<-function(clusterName, taskIds, getIP = FALSE){
         idx <- which(ENIs!="")
         publicIPs <- rep("", length(taskIds))
         if(length(idx)!=0){
-            publicIPs[idx] <- getInstanceIP(ENIs[idx])
+            publicIPs[idx] <- getInstanceIP(ENIs[idx], ...)
         }
         data.frame(taskId = taskIds, status = status, privateIp = privateIPs, publicIp = publicIPs)
     }else{
@@ -123,8 +126,8 @@ getInstanceENI<-function(x){
     eni
 }
 
-getInstanceIP <- function(ENIs){
-    response <- ec2_describe_network_interfaces(NetworkInterfaceId = ENIs)
+getInstanceIP <- function(ENIs, ...){
+    response <- ec2_describe_network_interfaces(NetworkInterfaceId = ENIs, ...)
     IPs<- vapply(response, function(x)x$association$publicIp[[1]], character(1))
     IPs
 }

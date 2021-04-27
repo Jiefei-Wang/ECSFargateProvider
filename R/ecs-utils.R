@@ -87,7 +87,8 @@ ecsTaskScheduler <- function(provider, taskDefName , container, hardware,
                          memory=hardware@memory,
                          securityGroupId=provider$securityGroupId,
                          subnetId=provider$subnetId,
-                         enablePublicIp=publicIpEnable
+                         enablePublicIp=publicIpEnable,
+                         region = provider$region
     )
     if(is.null(instances)){
       break

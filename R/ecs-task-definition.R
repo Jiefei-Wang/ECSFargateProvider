@@ -1,7 +1,7 @@
 CreateTaskDefinition <- function(taskDefName, name, image,
                                  logConfiguration = NULL,
                                  executionRoleArn = NULL,
-                                 cpu = 256, memory = 512){
+                                 cpu = 256, memory = 512, ...){
     if(is.null(name)){
         name <- "container"
     }
@@ -11,36 +11,36 @@ CreateTaskDefinition <- function(taskDefName, name, image,
         essential = TRUE
     ))
     containerDefinitions[[1]]$logConfiguration <- logConfiguration
-    # containerDefinitions[[1]]$ExecutionRoleArn <- taskExecRole
     response <- ecs_register_task_definition(family=taskDefName,
                                              cpu = as.character(256),
                                              memory = as.character(memory),
                                              containerDefinitions = containerDefinitions,
                                              networkMode = "awsvpc",
                                              requiresCompatibilities = "FARGATE",
-                                             executionRoleArn  = executionRoleArn
+                                             executionRoleArn  = executionRoleArn,
+                                             ...
     )
     response$taskDefinitionArn
 }
 
-deleteTaskDefinition <- function(taskName, version = NULL){
+deleteTaskDefinition <- function(taskName, version = NULL, ...){
     if(!is.null(version)){
         taskName <- paste0(taskName,":", version)
     }
-    response <- ecs_deregister_task_definition(taskDefinition = taskName)
+    response <- ecs_deregister_task_definition(taskDefinition = taskName, ...)
     response
 }
 
-describeTaskDefinition <- function(taskName, version = NULL){
+describeTaskDefinition <- function(taskName, version = NULL, ...){
     if(!is.null(version)){
         taskName <- paste0(taskName,":", version)
     }
-    response <- ecs_describe_task_definition(taskDefinition = taskName)
+    response <- ecs_describe_task_definition(taskDefinition = taskName, ...)
     response
 }
 
-listTaskDefinitions<-function(taskName = NULL){
-    defArns <- ecs_list_task_definitions(familyPrefix = taskName)
+listTaskDefinitions<-function(taskName = NULL, ...){
+    defArns <- ecs_list_task_definitions(familyPrefix = taskName, ...)
     defInfo <- ECSGetResourceNames(defArns)
     defInfo <- strsplit(defInfo,":", fixed = TRUE)
     defNames <- vapply(defInfo, function(x)x[1], character(1))
@@ -48,55 +48,48 @@ listTaskDefinitions<-function(taskName = NULL){
     data.frame(name = defNames, version = defVersions)
 }
 
-configTaskDefinition <- function(x, cluster){
+configTaskDefinition <- function(x, cluster, ...){
     if(!is.null(.getServerContainer(cluster))){
         configTaskDefinitionInternal(x,
                                      "serverTaskDefName",
-                                     .getServerContainer(cluster))
+                                     .getServerContainer(cluster),
+                                     ...)
     }
     configTaskDefinitionInternal(x,
                                  "workerTaskDefName",
-                                 .getWorkerContainer(cluster))
+                                 .getWorkerContainer(cluster),
+                                 ...)
 
 }
 
-configTaskDefinitionInternal <- function(x, taskNameSlot, container){
+configTaskDefinitionInternal <- function(x, taskNameSlot, container, ...){
     taskDefName <- x$field(taskNameSlot)
     verifySlot <- paste0(taskNameSlot, "Verified")
     taskDefNameVerified <- x$field(verifySlot)
     if(!taskDefNameVerified){
-        definitionList <- listTaskDefinitions(taskName = taskDefName)
+        definitionList <- listTaskDefinitions(taskName = taskDefName, ...)
         needDef <- nrow(definitionList)==0
         if(!needDef){
             idx <- which.max(definitionList$version)
-            taskInfo <- describeTaskDefinition(taskDefName, definitionList$version[idx])
+            taskInfo <- describeTaskDefinition(taskDefName, definitionList$version[idx],
+                                               ...)
 
             containerDef <- taskInfo$containerDefinitions[[1]]
             nameCheck <- identical(
                 containerDef$name,
                 container$name
-                )
+            )
             imageCheck <- identical(
                 containerDef$image,
                 container$image)
-            executionRoleArn <- NULL
-            logConfig <- NULL
-            if(x$logDriver!="none"){
-                logConfig <- getLogJson(x,taskDefName)
-                logCheck <- identical(
-                    containerDef$logConfiguration$logDriver,logConfig$logDriver)&&
-                    listSetEqual(containerDef$logConfiguration$options,
-                                 logConfig$options)
-                if(logConfig$logDriver=="awslogs"){
-                    executionRoleArn <- configTaskExecRoleArn(x)
-                    if(is.null(executionRoleArn)){
-                        stop("Fail to find the task execution role required by the awslogs")
-                    }
-                }
-            }else{
-                logCheck <- TRUE
-            }
-            needDef <- !all(nameCheck, imageCheck, logCheck)
+
+            logConfig <- getLogJson(x,taskDefName)
+            logCheck <- identical(
+                containerDef$logConfiguration$logDriver,logConfig$logDriver)&&
+                listSetEqual(containerDef$logConfiguration$options,
+                             logConfig$options)
+
+            needDef <- any(!nameCheck, !imageCheck, !logCheck)
         }
 
         if(needDef){
@@ -105,7 +98,8 @@ configTaskDefinitionInternal <- function(x, taskNameSlot, container){
                 name = container$name,
                 image =  container$image,
                 logConfiguration=logConfig,
-                executionRoleArn=executionRoleArn
+                executionRoleArn=x$taskExecRoleId,
+                ...
             )
         }
         x$field(verifySlot, TRUE)

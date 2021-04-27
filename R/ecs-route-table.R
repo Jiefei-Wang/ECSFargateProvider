@@ -1,19 +1,20 @@
-createRouteTable <- function(vpcId){
+createRouteTable <- function(vpcId, ...){
     tagSpecification <- ECSTagTemplate
     tagSpecification[[1]]$ResourceType <- "route-table"
-    response <- ec2_create_route_table(VpcId = vpcId,TagSpecification=tagSpecification)
+    response <- ec2_create_route_table(VpcId = vpcId,TagSpecification=tagSpecification, ...)
     response$routeTableId[[1]]
 }
 
-deleteRouteTable <- function(routeTableId){
-    response <- ec2_delete_route_table(RouteTableId = routeTableId)
+deleteRouteTable <- function(routeTableId, ...){
+    response <- ec2_delete_route_table(RouteTableId = routeTableId, ...)
     response
 }
 
 listRouteTables<-function(filterList = list(),
                           idFilter = NULL,
                           vpcFilter = NULL,
-                          gatewayFilter = NULL){
+                          gatewayFilter = NULL,
+                          ...){
     action <- "DescribeRouteTables"
     if(!is.null(idFilter)){
         filterList[["route-table-id"]] <- idFilter
@@ -24,7 +25,7 @@ listRouteTables<-function(filterList = list(),
     if(!is.null(gatewayFilter)){
         filterList[["route.gateway-id"]] <- gatewayFilter
     }
-    response <- ec2_describe_route_tables(Filter=filterList)
+    response <- ec2_describe_route_tables(Filter=filterList, ...)
 
     routeIds <- vapply(response, function(x)x$routeTableId[[1]], character(1))
     vpcIds <- vapply(response, function(x)x$vpcId[[1]], character(1))
@@ -32,13 +33,13 @@ listRouteTables<-function(filterList = list(),
                vpcId=vpcIds)
 }
 
-configRouteTable <- function(x){
+configRouteTable <- function(x, ...){
     if(!x$routeTableVerified){
-        vpcId <- configVpcId(x)
-        routeTableList <- listRouteTables(filterList = ECSfilterList, vpcFilter = vpcId)
+        vpcId <- configVpcId(x, ...)
+        routeTableList <- listRouteTables(filterList = ECSfilterList, vpcFilter = vpcId, ...)
         if(is.empty(x$routeTableId)){
             if(nrow(routeTableList)==0){
-                x$routeTableId <- createRouteTable(vpcId)
+                x$routeTableId <- createRouteTable(vpcId, ...)
             }else{
                 x$routeTableId <- routeTableList$routeId[1]
             }
@@ -50,8 +51,8 @@ configRouteTable <- function(x){
                      "or does not match with the VPC id")
             }
         }
-        subnetId <- configSubnetId(x)
-        ec2_associate_route_table(RouteTableId = x$routeTableId,SubnetId = subnetId)
+        subnetId <- configSubnetId(x, ...)
+        ec2_associate_route_table(RouteTableId = x$routeTableId,SubnetId = subnetId, ...)
         x$routeTableVerified <- TRUE
     }
     x$routeTableId

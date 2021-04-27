@@ -1,22 +1,24 @@
-createSecurityGroup <- function(groupName, vpcId){
+createSecurityGroup <- function(groupName, vpcId, ...){
     tagSpecification <- ECSTagTemplate
     tagSpecification[[1]]$ResourceType <- "security-group"
     response <- ec2_create_security_group(
         GroupName = groupName,
         VpcId = vpcId,
         TagSpecification=tagSpecification,
-        GroupDescription = "Security group used by R worker nodes")
+        GroupDescription = "Security group used by R worker nodes",
+        ...)
     response$groupId[[1]]
 }
-deleteSecurityGroup <- function(groupId){
-    response <- ec2_delete_security_group(GroupId=groupId)
+deleteSecurityGroup <- function(groupId, ...){
+    response <- ec2_delete_security_group(GroupId=groupId, ...)
     response
 }
 
 listSecurityGroups <- function(filterList = list(),
                                vpcFilter = NULL,
                                nameFilter = NULL,
-                               idFilter = NULL){
+                               idFilter = NULL,
+                               ...){
     if(!is.null(vpcFilter)){
         filterList[["vpc-id"]] <- vpcFilter
     }
@@ -26,7 +28,7 @@ listSecurityGroups <- function(filterList = list(),
     if(!is.null(idFilter)){
         filterList[["group-id"]] <- idFilter
     }
-    response <- ec2_describe_security_groups(Filter = filterList)
+    response <- ec2_describe_security_groups(Filter = filterList, ...)
 
     groupNames <- vapply(response, function(x)x$groupName[[1]], character(1))
     groupIds <- vapply(response, function(x)x$groupId[[1]], character(1))
@@ -37,10 +39,10 @@ listSecurityGroups <- function(filterList = list(),
                vpcId= groupvpcIds)
 }
 
-configSecurityGroup <- function(x){
+configSecurityGroup <- function(x, ...){
     if(!x$securityGroupVerified){
-        vpcId <- configVpcId(x)
-        securityGroupList <- listSecurityGroups(vpcFilter = vpcId)
+        vpcId <- configVpcId(x, ...)
+        securityGroupList <- listSecurityGroups(vpcFilter = vpcId, ...)
         if(is.empty(x$securityGroupId)){
             idx <- which(securityGroupList$name == x$securityGroupName)
             if(length(idx)!=0){
@@ -48,7 +50,7 @@ configSecurityGroup <- function(x){
             }else{
                 x$securityGroupId <-
                     createSecurityGroup(x$securityGroupName,
-                                        vpcId)
+                                        vpcId, ...)
             }
         }else{
             idx <- which(securityGroupList$groupId == x@securityGroupId)
@@ -65,7 +67,7 @@ configSecurityGroup <- function(x){
 #################################
 # security group policy
 #################################
-createSecurityGroupIpv4Rule <- function(securityGroupId, port){
+createSecurityGroupIpv4Rule <- function(securityGroupId, port, ...){
     ipPermissions <- list(
         list(
             FromPort = port,
@@ -77,11 +79,12 @@ createSecurityGroupIpv4Rule <- function(securityGroupId, port){
     )
     response <- ec2_authorize_security_group_ingress(
         GroupId = securityGroupId,
-        IpPermissions=ipPermissions
+        IpPermissions=ipPermissions,
+        ...
     )
     response
 }
-createSecurityGroupIpv6Rule <- function(securityGroupId, port){
+createSecurityGroupIpv6Rule <- function(securityGroupId, port, ...){
     ipPermissions <- list(
         list(
             FromPort = port,
@@ -93,14 +96,15 @@ createSecurityGroupIpv6Rule <- function(securityGroupId, port){
     )
     response <- ec2_authorize_security_group_ingress(
         GroupId = securityGroupId,
-        IpPermissions=ipPermissions
+        IpPermissions=ipPermissions,
+        ...
     )
     response
 }
 
-listSecurityInboundRule<-function(securityGroupId){
+listSecurityInboundRule<-function(securityGroupId, ...){
     filterList <- list("group-id" = securityGroupId)
-    response <- ec2_describe_security_groups(Filter = filterList)
+    response <- ec2_describe_security_groups(Filter = filterList, ...)
 
     from_port_list<-c()
     to_port_list<-c()
@@ -119,26 +123,29 @@ listSecurityInboundRule<-function(securityGroupId){
 }
 
 
-ConfigInboundPermissions<-function(x, ports){
+ConfigInboundPermissions<-function(x, ports, ...){
     if(!x$inboundPermissionVerified){
-        securityGroupId <- configSecurityGroup(x)
-        inboundRules <- listSecurityInboundRule(securityGroupId)
+        securityGroupId <- configSecurityGroup(x, ...)
+        inboundRules <- listSecurityInboundRule(securityGroupId, ...)
         for(i in ports)
-            ConfigInboundPermissionsInternal(securityGroupId, inboundRules, i)
+            ConfigInboundPermissionsInternal(securityGroupId=securityGroupId,
+                                             inboundRules=inboundRules,
+                                             port=i,
+                                             ...)
         x$inboundPermissionVerified <- TRUE
     }
 }
 
-ConfigInboundPermissionsInternal<-function(securityGroupId, inboundRules, port){
+ConfigInboundPermissionsInternal<-function(securityGroupId, inboundRules, port, ...){
     ipv4Idx <- which(inboundRules$ip=="0.0.0.0/0")
     if(length(ipv4Idx)==0||
        all(inboundRules$from[ipv4Idx]>port|inboundRules$to[ipv4Idx]<port)){
-        createSecurityGroupIpv4Rule(securityGroupId, port)
+        createSecurityGroupIpv4Rule(securityGroupId, port, ...)
     }
     ipv6Idx <- which(inboundRules$ip=="::/0")
     if(length(ipv6Idx)==0||
        all(inboundRules$from[ipv6Idx]>port|inboundRules$to[ipv6Idx]<port)){
-        createSecurityGroupIpv6Rule(securityGroupId, port)
+        createSecurityGroupIpv6Rule(securityGroupId, port, ...)
     }
 }
 
