@@ -48,13 +48,13 @@ ecsRunWorkers <- function(provider, cluster, container, hardware,
 
 
 ecsLaunchThrottle <- list(
-  interval = 15,
+  interval = 12,
   launchNumber = 10
 )
 addLaunchHistory <- function(number=1){
   launchTime <- Sys.time()
   for(i in seq_len(number)){
-    ecsLaunchHistory[[paste0(as.character(launchTime), "+" ,number)]] <- launchTime
+    ecsLaunchHistory[[paste0(as.character(launchTime), "+" ,i)]] <- launchTime
 
   }
 }
