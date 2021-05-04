@@ -48,7 +48,7 @@ ecsRunWorkers <- function(provider, cluster, container, hardware,
 
 
 ecsLaunchThrottle <- list(
-  interval = 11,
+  interval = 15,
   launchNumber = 10
 )
 addLaunchHistory <- function(number=1){
