@@ -1,6 +1,6 @@
 Package: ECSFargateProvider
-Title: The ECS Fargate cloud provider for the DockerParallel package
-Version: 0.99.0
+Title: The ECS Fargate Cloud Provider for the DockerParallel Package
+Version: 1.0.0
 Authors@R: 
     person(given = "Jiefei",
            family = "Wang",
@@ -20,8 +20,8 @@ Imports:
     utils,
     aws.iam
 Suggests: 
+    markdown,
     knitr,
     rmarkdown,
-    testthat,
-    BiocFEDRContainer
+    testthat
 VignetteBuilder: knitr

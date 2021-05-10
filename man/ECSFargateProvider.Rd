@@ -42,7 +42,13 @@ public network}
 
 \item{region}{Character, the region of the ECS computing cluster}
 }
+\value{
+a \code{ECSFargateProvider} object
+}
 \description{
 Create an ECS Fargate cloud provider. Note that the arguments for the function
 are the settings for ECS fargate. You can find them in the AWS ECS console.
+}
+\examples{
+provider <- ECSFargateProvider()
 }

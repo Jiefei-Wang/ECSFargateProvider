@@ -26,7 +26,7 @@ createRole <- function(roleName = defaultRoleName){
 
 
 attachDefaultPolicy <- function(roleName){
-    policy <- rjson::toJSON(policyTemplate)
+    policy <- as.character(jsonlite::toJSON(policyTemplate, auto_unbox =TRUE))
     aws.iam::add_policy(role = roleName,
                         policy = defaultPolicyName,
                         doc = policy,
