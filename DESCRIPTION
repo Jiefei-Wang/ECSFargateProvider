@@ -1,15 +1,15 @@
 Package: ECSFargateProvider
-Title: The ECS Fargate Cloud Provider for the DockerParallel Package
+Title: The 'ECS Fargate' Cloud Provider for the 'DockerParallel' Package
 Version: 1.0.0
 Authors@R: 
     person(given = "Jiefei",
            family = "Wang",
            role = c("aut", "cre"),
            email = "szwjf08@gmail.com")
-Description: Providing the implementation for the ECS Fargate cloud provider.
+Description: Providing the implementation for the 'ECS Fargate' cloud provider. 
+    For the general information about 'ECS', please visit <https://aws.amazon.com/ecs/>.
 License: GPL-3
 Encoding: UTF-8
-LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1
 Imports:
@@ -20,8 +20,4 @@ Imports:
     utils,
     aws.iam
 Suggests: 
-    markdown,
-    knitr,
-    rmarkdown,
     testthat
-VignetteBuilder: knitr
