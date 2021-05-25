@@ -49,7 +49,7 @@ listPolicies <- function(roleName){
 
 configTaskExecRole <- function(x){
     if(!x$taskExecRoleVerified){
-        if(!is.null(x$taskExecRoleId)){
+        if(!is.empty(x$taskExecRoleId)){
             roles <- listRoles()
             if(!x$taskExecRoleId%in%roles$roleArn){
                 stop("unable to find the role Arn <", x$taskExecRoleId,">")

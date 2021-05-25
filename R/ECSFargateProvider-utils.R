@@ -42,33 +42,41 @@ cleanupProvider <- function(x, verbose = TRUE){
 
 
 ## Collect the server's public and private IP
-packServerIp <- function(cluster){
-    paste0(.getServerPublicIp(cluster),"-", .getServerPrivateIp(cluster))
-}
+# packServerIp <- function(cluster){
+#     paste0(.getServerPublicIp(cluster), "-",
+#            .getServerPrivateIp(cluster),"-"
+#     )
+# }
 ## base64 encode the cloud config setting
-encodeCloudConfig <- function(cloudConfig){
-    fields <- names(cloudConfig$getRefClass()$fields())
-    info <- lapply(fields, function(i) cloudConfig$field(i))
-    names(info) <- fields
-    jsonlite::base64_enc(serialize(info, NULL))
+encodeClusterStaticData <- function(cluster){
+    jsonlite::base64_enc(serializeDockerClusterStaticData(cluster))
 }
 ## base64 decode the cloud config setting
-decodeCloudConfig <- function(value){
-    unserialize(jsonlite::base64_dec(value))
+decodeClusterStaticData <- function(value){
+    jsonlite::base64_dec(value)
 }
 
 
 ## Find the cloud config values from the environment variable
-getCloudConfigInfo <- function(taskDescription){
+getContainerJobQueueName <- function(taskDescription){
     env <- taskDescription$overrides$containerOverrides[[1]]$environment
     env <- ArrayToList(env)
-    value <- env[["ECSFargateCloudConfigInfo"]]
-    if(!is.null(value)){
-        cloudConfigValue <- decodeCloudConfig(value)
-        cloudConfigValue
+    # encodedClusterData <- env[["ECSFargateClusterStaticData"]]
+    jobQueueName <- env[["ECSFargateClusterJobQueueName"]]
+    if(!is.null(jobQueueName)){
+        # result$clusterStaticData <- decodeClusterStaticData(encodedClusterData)
+       jobQueueName
     }else{
         NULL
     }
+}
+
+getClusterStaticData <- function(taskDescription){
+    env <- taskDescription$overrides$containerOverrides[[1]]$environment
+    env <- ArrayToList(env)
+    encodedClusterData <- env[["ECSFargateClusterStaticData"]]
+    stopifnot(!is.null(encodedClusterData))
+    encodedClusterData
 }
 
 findServerInfo <- function(cluster, serverHandles){
@@ -80,8 +88,8 @@ findServerInfo <- function(cluster, serverHandles){
         arns <- c()
         idx <- c()
         for(i in seq_along(info$tasks)){
-            cloudConfigValue <- getCloudConfigInfo(info$tasks[[i]])
-            if(identical(cloudConfigValue$jobQueueName,jobQueue)){
+            clusterInfo <- getClusterInfo(info$tasks[[i]])
+            if(identical(clusterInfo$jobQueueName,jobQueue)){
                 arns <- c(arns, info$tasks[[i]]$taskArn)
                 idx <- c(idx, i)
             }
@@ -95,10 +103,10 @@ findServerInfo <- function(cluster, serverHandles){
                 arns <- arns[answer]
                 idx <- idx[answer]
             }
-            cloudConfigValue <- getCloudConfigInfo(info$tasks[[idx]])
+            clusterStaticData <- getClusterStaticData(info$tasks[[idx]])
             return(
                 list(handle = info$tasks[[idx]]$taskArn,
-                     cloudConfigValue=cloudConfigValue)
+                     clusterStaticData=clusterStaticData)
             )
         }
 
@@ -107,11 +115,12 @@ findServerInfo <- function(cluster, serverHandles){
     NULL
 }
 
-findWorkerHandles <- function(cluster, jobQueueName){
+findWorkerHandles <- function(cluster){
     provider <- .getCloudProvider(cluster)
     clusterName <- provider$clusterName
+    serverHandle <- provider$serverHandle
+    jobQueueName <- .getJobQueueName(cluster)
     workerHandles <- listRunningWorkers(cluster)
-    serverIp <- packServerIp(cluster)
     result <- c()
     if(!is.null(workerHandles)){
         info <- ecs_describe_tasks(cluster = clusterName, tasks = workerHandles)
@@ -119,7 +128,7 @@ findWorkerHandles <- function(cluster, jobQueueName){
             env <- i$overrides$containerOverrides[[1]]$environment
             env <- ArrayToList(env)
             if(identical(env[["ECSFargateCloudJobQueueName"]], jobQueueName)&&
-               identical(env[["ECSFargateCloudServerIP"]], serverIp)){
+               identical(env[["ECSFargateCloudServerHandle"]], serverHandle)){
                 workerNum <- as.numeric(env[["ECSFargateCloudWorkerNumber"]])
                 result <- c(result, rep(i$taskArn,workerNum))
             }

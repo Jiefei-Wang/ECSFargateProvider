@@ -32,9 +32,8 @@ ecsRunWorkers <- function(provider, cluster, container, hardware,
     informUpgradedHardware(fargateHardware, requiredHardware, workerPerContainer)
   }
   ## save the cluster info to the container environment
-  serverIp <- packServerIp(cluster)
   workerContainer$environment[["ECSFargateCloudJobQueueName"]] <- .getJobQueueName(cluster)
-  workerContainer$environment[["ECSFargateCloudServerIP"]] <- serverIp
+  workerContainer$environment[["ECSFargateCloudServerHandle"]] <- provider$serverHandle
   workerContainer$environment[["ECSFargateCloudWorkerNumber"]] <- workerPerContainer
 
   instances <- ecsTaskScheduler(provider=provider,
@@ -173,7 +172,16 @@ environmentToJSON <- function(x){
   x <- x[!vapply(x, is.null, logical(1))]
   result <- list()
   for(i in seq_along(x)){
-    result[[i]] <- list(name = names(x)[i], value = as.character(x[[i]]))
+    if(length(x[[1]])==0){
+      warning("The length of the environment variable <", names(x)[i],
+              "> is 0. The variable will be ignored.")
+      next
+    }
+    if(length(x[[1]])!=1){
+      warning("The length of the environment variable <", names(x)[i],
+              "> is not 1. Only the first element will be used.")
+    }
+    result[[i]] <- list(name = names(x)[i], value = as.character(x[[i]])[1])
   }
   result
 }

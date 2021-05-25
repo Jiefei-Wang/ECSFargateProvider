@@ -7,16 +7,16 @@
 .ECSFargateProvider <- setRefClass(
     "ECSFargateProvider",
     fields = list(
-        clusterName = "CharOrNULL",
-        serverTaskDefName = "CharOrNULL",
-        workerTaskDefName = "CharOrNULL",
-        securityGroupName = "CharOrNULL",
-        vpcId = "CharOrNULL",
-        subnetId = "CharOrNULL",
-        securityGroupId = "CharOrNULL",
-        internetGatewayId = "CharOrNULL",
-        routeTableId = "CharOrNULL",
-        taskExecRoleId = "CharOrNULL",
+        clusterName = "character",
+        serverTaskDefName = "character",
+        workerTaskDefName = "character",
+        securityGroupName = "character",
+        vpcId = "character",
+        subnetId = "character",
+        securityGroupId = "character",
+        internetGatewayId = "character",
+        routeTableId = "character",
+        taskExecRoleId = "character",
         enableWorkerPublicIp = "logical",
         clusterNameVerified = "logical",
         serverTaskDefNameVerified = "logical",
@@ -32,7 +32,8 @@
         initialized = "logical",
         logDriver = "character",
         logOptions = "list",
+        serverHandle = "character",
         region = "character"
     ),
-    contains = "CloudProvider"
+    contains = "ManagedCloudProvider"
 )

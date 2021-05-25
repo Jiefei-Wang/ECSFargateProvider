@@ -23,15 +23,16 @@ ECSFargateProvider <- function(clusterName = "R-worker-cluster",
                                serverTaskDefName = "R-server-task-definition",
                                workerTaskDefName = "R-worker-task-definition",
                                securityGroupName = "R-parallel-security-group",
-                               vpcId = NULL,
-                               subnetId = NULL,
-                               securityGroupId = NULL,
-                               internetGatewayId = NULL,
-                               routeTableId = NULL,
-                               taskExecRoleId = NULL,
+                               vpcId = character(0),
+                               subnetId = character(0),
+                               securityGroupId = character(0),
+                               internetGatewayId = character(0),
+                               routeTableId = character(0),
+                               taskExecRoleId = character(0),
                                enableWorkerPublicIp = TRUE,
                                logDriver = c("auto", "none", "awslogs", "awsfirelens","splunk"),
                                logOptions = list(),
+                               serverHandle = character(0),
                                region = aws.ecx::aws_get_region()){
 
     .ECSFargateProvider$new(
@@ -60,6 +61,7 @@ ECSFargateProvider <- function(clusterName = "R-worker-cluster",
         initialized = FALSE,
         logDriver = match.arg(logDriver),
         logOptions = logOptions,
+        serverHandle = serverHandle,
         region = region
     )
 }

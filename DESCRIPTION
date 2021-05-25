@@ -1,6 +1,6 @@
 Package: ECSFargateProvider
 Title: The 'ECS Fargate' Cloud Provider for the 'DockerParallel' Package
-Version: 1.0.0
+Version: 1.0.2
 Authors@R: 
     person(given = "Jiefei",
            family = "Wang",

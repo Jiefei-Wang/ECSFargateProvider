@@ -2,11 +2,12 @@
 #'
 #' Initialize the Fargate provider
 #'
-#' @inheritParams DockerParallel::initializeProvider
+#' @inheritParams DockerParallel::initializeCloudProvider
 #'
 #' @return No return value
 #' @export
-setMethod("initializeProvider", "ECSFargateProvider", function(provider, cluster, verbose){
+setMethod("initializeCloudProvider", "ECSFargateProvider",
+          function(provider, cluster, verbose){
     if(!provider$initialized){
         if(!existCredentials()){
             stop(
@@ -64,13 +65,13 @@ setMethod("initializeProvider", "ECSFargateProvider", function(provider, cluster
     }
     invisible(NULL)
 })
-
-
-
+#################################
+##  Server management
+#################################
 #' Run the server container
 #'
 #' Run the server and return the server instance handle.
-#' The function will set the environment variable `ECSFargateCloudConfigInfo` to the container
+#' The function will set the environment variable `ECSFargateClusterStaticData` to the container
 #'
 #' @inheritParams DockerParallel::runDockerServer
 #'
@@ -78,13 +79,14 @@ setMethod("initializeProvider", "ECSFargateProvider", function(provider, cluster
 #' @export
 setMethod("runDockerServer", "ECSFargateProvider",
           function(provider, cluster, container, hardware, verbose = 0L){
+              stopifnot(length(provider$serverHandle)==0)
               verbosePrint(verbose>0, "Deploying server container")
 
               ## save the cloud config to the running instance
-              encodedCloudConfig <- encodeCloudConfig(.getCloudConfig(cluster))
+              encodedClusterStaticData <- encodeClusterStaticData(cluster)
               container <- container$copy()
-              container$environment[["ECSFargateCloudConfigInfo"]] <- encodedCloudConfig
-
+              container$environment[["ECSFargateClusterStaticData"]] <- encodedClusterStaticData
+              container$environment[["ECSFargateClusterJobQueueName"]] <- .getJobQueueName(cluster)
               fargateHardware <- getValidFargateHardware(hardware)
               if(verbose){
                   informUpgradedHardware(fargateHardware, hardware, 1)
@@ -102,21 +104,92 @@ setMethod("runDockerServer", "ECSFargateProvider",
               if(is.null(instanceId)){
                   stop("Fail to deploy the ECS container, something is wrong")
               }
-              instanceId
+              provider$serverHandle <- instanceId
+
           })
 
 
+#' Stop the server container
+#'
+#' stop the server container
+#'
+#' @inheritParams DockerParallel::stopDockerServer
+#' @return No return value
+#' @export
+setMethod("stopDockerServer","ECSFargateProvider",
+          function(provider, cluster, verbose){
+              stopifnot(length(provider$serverHandle)==1)
+              stopTasks(provider$clusterName, taskIds = provider$serverHandle)
+          })
+
+#' Get the server status
+#'
+#' Get the server status, return a character value which must be in one of three values
+#' `"initializing"`, `"running"` or `"stopped"`.
+#'
+#' @inheritParams DockerParallel::getServerStatus
+#' @returns Character(1)
+#' @export
+setMethod("getServerStatus", "ECSFargateProvider",
+          function(provider, cluster, verbose){
+              stopifnot(length(provider$serverHandle)<=1)
+              if(length(provider$serverHandle)==1){
+                  taskInfo <- getTaskDetails(provider$clusterName, taskIds = provider$serverHandle)
+                  status <- tolower(taskInfo$status)
+                  if(status %in% c("running", "stopped")){
+                      status
+                  }else{
+                      "initializing"
+                  }
+              }else{
+                  "stopped"
+              }
+})
+
+#' Get the server public/private IPs
+#'
+#' Get the server public/private IPs
+#'
+#' @inheritParams DockerParallel::getDockerServerIp
+#'
+#' @returns
+#' A data.frame with publicIp and privateIp columns and each row corresponds to
+#' an element in instanceHandles.
+#' @export
+setMethod("getDockerServerIp", "ECSFargateProvider",
+          function(provider, cluster, verbose = 0L){
+              stopifnot(length(provider$serverHandle) == 1)
+              while(TRUE){
+                  taskInfo <- getTaskDetails(provider$clusterName,
+                                             taskIds = provider$serverHandle,
+                                             getIP = TRUE)
+                  if(taskInfo$publicIp!=""&&taskInfo$privateIp!=""){
+                      break
+                  }
+                  if(taskInfo$status=="STOPPED"){
+                      stop("The server has been stopped")
+                  }
+              }
+              taskInfo$publicPort <- .getServerPort(cluster)
+              taskInfo$privatePort <- .getServerPort(cluster)
+              taskInfo
+          }
+)
+
+#################################
+##  worker management
+#################################
 #' Run the worker container
 #'
-#' Run the workers and return a list of worker instance handles.
+#' Run the workers and return a character vector of worker handles.
 #' The function will set the environment variable `ECSFargateCloudJobQueueName`,
-#' `ECSFargateCloudServerIP` and `ECSFargateCloudWorkerNumber` to the container
+#' `ECSFargateCloudServerHandle` and `ECSFargateCloudWorkerNumber` to the container
 #'
-#' @inheritParams DockerParallel::runDockerWorkers
+#' @inheritParams DockerParallel::runDockerWorkerContainers
 #'
-#' @return A list of worker handle in character
+#' @return A character vector of worker handles
 #' @export
-setMethod("runDockerWorkers", "ECSFargateProvider",
+setMethod("runDockerWorkerContainers", "ECSFargateProvider",
           function(provider, cluster, container, hardware, workerNumber, verbose = 0L){
               verbosePrint(verbose>0, "Deploying worker container")
               instanceIds <- c()
@@ -134,11 +207,11 @@ setMethod("runDockerWorkers", "ECSFargateProvider",
                       workerPerContainer=maxWorkers,
                       verbose=verbose
                   )
-                  if(length(instances)!= containerWithMaxWorker){
-                      stopTasks(provider$clusterName, instances)
+                  instanceIds <- c(instanceIds, instances)
+                  if(length(instances) != containerWithMaxWorker){
+                      stopTasks(provider$clusterName, instanceIds)
                       stop("Fail to deploy the ECS worker container, something is wrong")
                   }
-                  instanceIds<-c(instanceIds, instances)
               }
               ## Run the container which does not have the maximum worker number
               lastContainerWorkerNum <- workerNumber - maxWorkers*containerWithMaxWorker
@@ -151,9 +224,9 @@ setMethod("runDockerWorkers", "ECSFargateProvider",
                       containerNumber=1,
                       workerPerContainer=lastContainerWorkerNum,
                       verbose=verbose)
-                  instanceIds <-c (instanceIds, instance)
+                  instanceIds <- c(instanceIds, instance)
                   if(length(instance)!=1){
-                      stopTasks(provider$clusterName, instance)
+                      stopTasks(provider$clusterName, instanceIds)
                       stop("Fail to deploy the ECS worker container, something is wrong")
                   }
               }
@@ -167,70 +240,38 @@ setMethod("runDockerWorkers", "ECSFargateProvider",
           }
 )
 
-#' Get the instance public/private IPs
-#'
-#' Get the instance public/private IPs
-#'
-#' @inheritParams DockerParallel::getDockerInstanceIps
-#'
-#' @returns
-#' A data.frame with publicIp and privateIp columns and each row corresponds to
-#' an element in instanceHandles.
-#' @export
-setMethod("getDockerInstanceIps", "ECSFargateProvider",
-          function(provider, instanceHandles, verbose = 0L){
-              while(TRUE){
-                  taskInfo <- getTaskDetails(provider$clusterName,
-                                             taskIds = instanceHandles,
-                                             getIP = TRUE)
-                  if(taskInfo$publicIp!=""&&taskInfo$privateIp!=""){
-                      break
-                  }
-                  if(taskInfo$status=="STOPPED"){
-                      stop("The server has been stopped")
-                  }
-              }
-              taskInfo
-          }
-)
 
 #' Get the instance status
 #'
 #' Get the instance status
 #'
-#' @inheritParams DockerParallel::getDockerInstanceStatus
+#' @inheritParams DockerParallel::getDockerWorkerStatus
 #'
 #' @returns
-#' A character vector with each element corresponding to an instance in instanceHandles.
+#' A character vector with each element corresponding to a worker in workerHandles.
 #' Each element must be one of three possible characters "initializing", "running" or "stopped"
 #' @export
-setMethod("getDockerInstanceStatus", "ECSFargateProvider",
-          function(provider, instanceHandles, verbose = 0L){
-              uniqueHandles <- unique(instanceHandles)
-              taskInfo <- getTaskDetails(provider$clusterName, taskIds = uniqueHandles)
-              instanceStatus <- rep("initializing", length(uniqueHandles))
+setMethod("getDockerWorkerStatus", "ECSFargateProvider",
+          function(provider, cluster, workerHandles, verbose = 0L){
+              taskInfo <- getTaskDetails(provider$clusterName, taskIds = workerHandles)
+              instanceStatus <- rep("initializing", length(workerHandles))
               instanceStatus[taskInfo$status == "RUNNING"] <- "running"
               instanceStatus[taskInfo$status == "STOPPED"] <- "stopped"
-              result <- rep("", length(instanceHandles))
-              for(i in seq_along(uniqueHandles)){
-                  idx <- vapply(instanceHandles, function(x) identical(x, uniqueHandles[[i]]),logical(1))
-                  result[idx] <- instanceStatus[i]
-              }
-              result
+              instanceStatus
           }
 )
 
-#' Kill the instances
+#' Kill the worker container
 #'
-#' Kill the instances
+#' Kill the worker container
 #'
-#' @inheritParams DockerParallel::killDockerInstances
+#' @inheritParams DockerParallel::killDockerWorkerContainers
 #'
 #' @return A logical vector indicating whether the killing operation is success for each instance
 #' @export
-setMethod("killDockerInstances", "ECSFargateProvider",
-          function(provider, instanceHandles, verbose = 0L){
-              stopTasks(provider$clusterName, taskIds = unique(instanceHandles))
+setMethod("killDockerWorkerContainers", "ECSFargateProvider",
+          function(provider, cluster, workerHandles, verbose = 0L){
+              stopTasks(provider$clusterName, taskIds = workerHandles)
           }
 )
 
@@ -280,22 +321,13 @@ setMethod("reconnectDockerCluster", "ECSFargateProvider",
               serverInfo <- findServerInfo(cluster, serverHandles)
               if(!is.null(serverInfo)){
                   ## Set the cloud config
-                  serverHandle <- serverInfo$handle
-                  cloudConfigValue <- serverInfo$cloudConfigValue
-                  lapply(names(cloudConfigValue), function(i)
-                      cloudConfig$field(i, cloudConfigValue[[i]]))
-
-                  ## Set the server runtime
-                  serverDetails <-
-                      getTaskDetails(provider$clusterName,taskIds = serverHandle, getIP = TRUE)
-                  .setServerHandle(cluster, serverHandle)
-                  .setServerPublicIp(cluster, serverDetails$publicIp)
-                  .setServerPrivateIp(cluster, serverDetails$privateIp)
+                  provider$serverHandle <- serverInfo$handle
+                  clusterStaticData <- serverInfo$clusterStaticData
+                  unserializeDockerCluster(cluster, provider, clusterStaticData)
 
                   ## Set the worker runtime
-                  workerHandles <- findWorkerHandles(cluster, cloudConfigValue$jobQueueName)
-                  .addWorkerHandles(cluster, workerHandles)
-                  .setWorkerNumber(cluster, length(workerHandles))
+                  workerHandles <- findWorkerHandles(cluster)
+                  addManagedWorkerHandles(cluster, workerHandles)
               }
           }
 )
