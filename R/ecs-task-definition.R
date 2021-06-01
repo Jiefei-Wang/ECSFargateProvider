@@ -24,9 +24,11 @@ CreateTaskDefinition <- function(taskDefName, name, image,
 }
 
 deleteTaskDefinition <- function(taskName, version = NULL, ...){
-    if(!is.null(version)){
-        taskName <- paste0(taskName,":", version)
+    if(is.null(version)){
+        taskList <- listTaskDefinitions(taskName = taskName)
+        version <- taskList$version
     }
+    taskName <- paste0(taskName,":", version)
     response <- ecs_deregister_task_definition(taskDefinition = taskName, ...)
     response
 }
@@ -69,6 +71,7 @@ configTaskDefinitionInternal <- function(x, taskNameSlot, container, ...){
     if(!taskDefNameVerified){
         definitionList <- listTaskDefinitions(taskName = taskDefName, ...)
         needDef <- nrow(definitionList)==0
+        logConfig <- getLogJson(x,taskDefName)
         if(!needDef){
             idx <- which.max(definitionList$version)
             taskInfo <- describeTaskDefinition(taskDefName, definitionList$version[idx],
@@ -83,7 +86,6 @@ configTaskDefinitionInternal <- function(x, taskNameSlot, container, ...){
                 containerDef$image,
                 container$image)
 
-            logConfig <- getLogJson(x,taskDefName)
             logCheck <- identical(
                 containerDef$logConfiguration$logDriver,logConfig$logDriver)&&
                 listSetEqual(containerDef$logConfiguration$options,

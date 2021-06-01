@@ -2,6 +2,7 @@
 #' @import methods
 #' @import utils
 #' @import DockerParallel
+#' @import ManagedCloudProvider
 #' @import aws.iam
 #' @importFrom jsonlite base64_enc base64_dec
 NULL

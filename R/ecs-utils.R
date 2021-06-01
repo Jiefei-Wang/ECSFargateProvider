@@ -32,9 +32,9 @@ ecsRunWorkers <- function(provider, cluster, container, hardware,
     informUpgradedHardware(fargateHardware, requiredHardware, workerPerContainer)
   }
   ## save the cluster info to the container environment
-  workerContainer$environment[["ECSFargateCloudJobQueueName"]] <- .getJobQueueName(cluster)
-  workerContainer$environment[["ECSFargateCloudServerHandle"]] <- provider$serverHandle
-  workerContainer$environment[["ECSFargateCloudWorkerNumber"]] <- workerPerContainer
+  workerContainer$environment[["ECSFargateClusterJobQueueName"]] <- .getJobQueueName(cluster)
+  workerContainer$environment[["ECSFargateClusterServerSignature"]] <- getServerSignature(cluster)
+  workerContainer$environment[["ECSFargateClusterWorkerNumber"]] <- workerPerContainer
 
   instances <- ecsTaskScheduler(provider=provider,
                                 taskDefName=taskDefName,
@@ -129,6 +129,16 @@ ECSGetResourceName <- function(ARN){
     x
   }else{
     sub(".+?/","",x)
+  }
+}
+
+ECSGetTaskShortArn <- function(arn){
+  match_index <- gregexpr("/", arn, fixed = TRUE)[[1]]
+  if(length(match_index)==1 && match_index==-1){
+    arn
+  }else{
+    x <- substring(arn, match_index[length(match_index)]+1)
+    x
   }
 }
 

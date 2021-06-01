@@ -8,70 +8,71 @@
 #' @export
 setMethod("initializeCloudProvider", "ECSFargateProvider",
           function(provider, cluster, verbose){
-    if(!provider$initialized){
-        if(!existCredentials()){
-            stop(
-                paste0("The AWS credentials do not exist, please set them via <aws.ecx::aws_set_credentials>\n",
-                       "The general information can be found at https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html")
-            )
-        }
-        if(!cluster$isServerRunning()){
-            .setServerWorkerSameLAN(cluster, TRUE)
-        }
-        verbosePrint(verbose, "Initializing the ECS provider")
-        ## Cluster name
-        verbosePrint(verbose>1, "\tSetting up cluster")
-        clusterName <- configClusterName(provider, region = provider$region)
-        verbosePrint(verbose>1, "\tCluster name: \t", clusterName)
-        ## VPC
-        verbosePrint(verbose>1, "\tSetting up VPC")
-        VPCId <- configVpcId(provider, region = provider$region)
-        verbosePrint(verbose>1, "\tVPC: \t", VPCId)
-        ## subnet
-        verbosePrint(verbose>1, "\tSetting up subnet")
-        subnetId <- configSubnetId(provider, region = provider$region)
-        verbosePrint(verbose>1, "\tSubnet id: \t", subnetId)
-        ## gateway
-        verbosePrint(verbose>1, "\tSetting up gateway")
-        gatewayId <- configInternetGateway(provider, region = provider$region)
-        verbosePrint(verbose>1, "\tGateway: \t", gatewayId)
-        ## route table
-        verbosePrint(verbose>1, "\tSetting up route table")
-        routeTableId <- configRouteTable(provider, region = provider$region)
-        verbosePrint(verbose>1, "\tRoute table: \t", routeTableId)
-        ## route
-        verbosePrint(verbose>1, "\tSetting up default route")
-        configDefaultRoute(provider, region = provider$region)
-        verbosePrint(verbose>1, "\tDefault route finished")
-        ## security group
-        verbosePrint(verbose>1, "\tSetting up security group")
-        securityGroupId <- configSecurityGroup(provider, region = provider$region)
-        verbosePrint(verbose>1, "\tSecurity group: ",securityGroupId)
-        # Inbound permission
-        verbosePrint(verbose>1, "\tSetting up SSH and server-worker inbound permission")
-        port <- c(22, cluster@cloudConfig$serverPort)
-        ConfigInboundPermissions(x = provider, ports = port, region = provider$region)
-        verbosePrint(verbose>1, "\tInbound permission finished")
+              if(!provider$initialized){
+                  if(!existCredentials()){
+                      stop(
+                          paste0("The AWS credentials do not exist, please set them via <aws.ecx::aws_set_credentials>\n",
+                                 "The general information can be found at https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html")
+                      )
+                  }
+                  if(!cluster$isServerRunning()){
+                      .setServerWorkerSameLAN(cluster, TRUE)
+                  }
+                  verbosePrint(verbose, "Initializing the ECS provider")
+                  ## Cluster name
+                  verbosePrint(verbose>1, "\tSetting up cluster")
+                  clusterName <- configClusterName(provider, region = provider$region)
+                  verbosePrint(verbose>1, "\tCluster name: \t", clusterName)
+                  ## VPC
+                  verbosePrint(verbose>1, "\tSetting up VPC")
+                  VPCId <- configVpcId(provider, region = provider$region)
+                  verbosePrint(verbose>1, "\tVPC: \t", VPCId)
+                  ## subnet
+                  verbosePrint(verbose>1, "\tSetting up subnet")
+                  subnetId <- configSubnetId(provider, region = provider$region)
+                  verbosePrint(verbose>1, "\tSubnet id: \t", subnetId)
+                  ## gateway
+                  verbosePrint(verbose>1, "\tSetting up gateway")
+                  gatewayId <- configInternetGateway(provider, region = provider$region)
+                  verbosePrint(verbose>1, "\tGateway: \t", gatewayId)
+                  ## route table
+                  verbosePrint(verbose>1, "\tSetting up route table")
+                  routeTableId <- configRouteTable(provider, region = provider$region)
+                  verbosePrint(verbose>1, "\tRoute table: \t", routeTableId)
+                  ## route
+                  verbosePrint(verbose>1, "\tSetting up default route")
+                  configDefaultRoute(provider, region = provider$region)
+                  verbosePrint(verbose>1, "\tDefault route finished")
+                  ## security group
+                  verbosePrint(verbose>1, "\tSetting up security group")
+                  securityGroupId <- configSecurityGroup(provider, region = provider$region)
+                  verbosePrint(verbose>1, "\tSecurity group: ",securityGroupId)
+                  # Inbound permission
+                  verbosePrint(verbose>1, "\tSetting up SSH and server-worker inbound permission")
+                  port <- c(22, cluster@cloudConfig$serverPort)
+                  ConfigInboundPermissions(x = provider, ports = port, region = provider$region)
+                  verbosePrint(verbose>1, "\tInbound permission finished")
 
-        # Task execution role
-        verbosePrint(verbose>1, "\tSetting up task execution role")
-        roleArn <- configTaskExecRole(provider)
-        verbosePrint(verbose>1, "\tTask execution role:", roleArn)
-        # Task definition
-        verbosePrint(verbose>1, "\tSetting up task defintion")
-        configTaskDefinition(provider, cluster, region = provider$region)
-        verbosePrint(verbose>1, "\tTask defintion finished")
-        provider$initialized <- TRUE
-    }
-    invisible(NULL)
-})
+                  # Task execution role
+                  verbosePrint(verbose>1, "\tSetting up task execution role")
+                  roleArn <- configTaskExecRole(provider)
+                  verbosePrint(verbose>1, "\tTask execution role:", roleArn)
+                  # Task definition
+                  verbosePrint(verbose>1, "\tSetting up task defintion")
+                  configTaskDefinition(provider, cluster, region = provider$region)
+                  verbosePrint(verbose>1, "\tTask defintion finished")
+                  provider$initialized <- TRUE
+              }
+              invisible(NULL)
+          })
 #################################
 ##  Server management
 #################################
 #' Run the server container
 #'
 #' Run the server and return the server instance handle.
-#' The function will set the environment variable `ECSFargateClusterStaticData` to the container
+#' The function will set the environment variable `ECSFargateClusterStaticData`,
+#' `ECSFargateClusterJobQueueName` to the container
 #'
 #' @inheritParams DockerParallel::runDockerServer
 #'
@@ -144,7 +145,7 @@ setMethod("getServerStatus", "ECSFargateProvider",
               }else{
                   "stopped"
               }
-})
+          })
 
 #' Get the server public/private IPs
 #'
@@ -182,10 +183,10 @@ setMethod("getDockerServerIp", "ECSFargateProvider",
 #' Run the worker container
 #'
 #' Run the workers and return a character vector of worker handles.
-#' The function will set the environment variable `ECSFargateCloudJobQueueName`,
-#' `ECSFargateCloudServerHandle` and `ECSFargateCloudWorkerNumber` to the container
+#' The function will set the environment variable `ECSFargateClusterJobQueueName`,
+#' `ECSFargateClusterServerSignature` and `ECSFargateClusterWorkerNumber` to the container
 #'
-#' @inheritParams DockerParallel::runDockerWorkerContainers
+#' @inheritParams ManagedCloudProvider::runDockerWorkerContainers
 #'
 #' @return A character vector of worker handles
 #' @export
@@ -245,7 +246,7 @@ setMethod("runDockerWorkerContainers", "ECSFargateProvider",
 #'
 #' Get the instance status
 #'
-#' @inheritParams DockerParallel::getDockerWorkerStatus
+#' @inheritParams ManagedCloudProvider::getDockerWorkerStatus
 #'
 #' @returns
 #' A character vector with each element corresponding to a worker in workerHandles.
@@ -265,7 +266,7 @@ setMethod("getDockerWorkerStatus", "ECSFargateProvider",
 #'
 #' Kill the worker container
 #'
-#' @inheritParams DockerParallel::killDockerWorkerContainers
+#' @inheritParams ManagedCloudProvider::killDockerWorkerContainers
 #'
 #' @return A logical vector indicating whether the killing operation is success for each instance
 #' @export
@@ -289,15 +290,18 @@ setMethod("killDockerWorkerContainers", "ECSFargateProvider",
 #' @export
 setMethod("dockerClusterExists", "ECSFargateProvider",
           function(provider, cluster, verbose = 0L){
+              jobQueueName <- .getJobQueueName(cluster)
+              clusterName <- provider$clusterName
               ## Check if the cluster exists
               clusterList <- listClusters()
-              if(!provider$clusterName%in%clusterList){
+              if(!clusterName%in%clusterList){
                   return(FALSE)
               }
 
               ## Check if the server exists
-              serverHandles <- listRunningServer(cluster)
-              serverInfo <- findServerInfo(cluster, serverHandles)
+              serverEnv <- findServerEnvironment(
+                  clusterName = clusterName,
+                  jobQueueName = jobQueueName)
               !is.null(serverInfo)
           }
 )
@@ -317,13 +321,19 @@ setMethod("dockerClusterExists", "ECSFargateProvider",
 setMethod("reconnectDockerCluster", "ECSFargateProvider",
           function(provider, cluster, verbose = 0L){
               cloudConfig <- .getCloudConfig(cluster)
-              serverHandles <- listRunningServer(cluster)
-              serverInfo <- findServerInfo(cluster, serverHandles)
+              jobQueueName <- .getJobQueueName(cluster)
+              clusterName <- provider$clusterName
+
+              serverEnv <- findServerEnvironment(
+                  clusterName = clusterName,
+                  jobQueueName = jobQueueName)
+              ## ask the user to select the server if multiple servers exist
+              serverInfo <- selectServer(serverEnv)
               if(!is.null(serverInfo)){
                   ## Set the cloud config
-                  provider$serverHandle <- serverInfo$handle
+                  provider$serverHandle <- serverInfo$serverHandle
                   clusterStaticData <- serverInfo$clusterStaticData
-                  unserializeDockerCluster(cluster, provider, clusterStaticData)
+                  setDockerStaticData(cluster, provider, clusterStaticData)
 
                   ## Set the worker runtime
                   workerHandles <- findWorkerHandles(cluster)

@@ -16,6 +16,7 @@ Imports:
     aws.ecx,
     methods,
     DockerParallel,
+    ManagedCloudProvider,
     jsonlite,
     utils,
     aws.iam

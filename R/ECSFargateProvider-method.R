@@ -19,7 +19,7 @@
 #' provider <- ECSFargateProvider()
 #' @return a `ECSFargateProvider` object
 #' @export
-ECSFargateProvider <- function(clusterName = "R-worker-cluster",
+ECSFargateProvider <- function(clusterName = "docker-parallel-cluster",
                                serverTaskDefName = "R-server-task-definition",
                                workerTaskDefName = "R-worker-task-definition",
                                securityGroupName = "R-parallel-security-group",

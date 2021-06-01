@@ -31,6 +31,6 @@ A character vector of worker handles
 }
 \description{
 Run the workers and return a character vector of worker handles.
-The function will set the environment variable \code{ECSFargateCloudJobQueueName},
-\code{ECSFargateCloudServerHandle} and \code{ECSFargateCloudWorkerNumber} to the container
+The function will set the environment variable \code{ECSFargateClusterJobQueueName},
+\code{ECSFargateClusterServerSignature} and \code{ECSFargateClusterWorkerNumber} to the container
 }

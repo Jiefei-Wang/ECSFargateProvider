@@ -22,5 +22,6 @@ The server handle in character
 }
 \description{
 Run the server and return the server instance handle.
-The function will set the environment variable \code{ECSFargateClusterStaticData} to the container
+The function will set the environment variable \code{ECSFargateClusterStaticData},
+\code{ECSFargateClusterJobQueueName} to the container
 }

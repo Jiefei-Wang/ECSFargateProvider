@@ -5,7 +5,7 @@
 \title{Create an ECS Fargate cloud provider}
 \usage{
 ECSFargateProvider(
-  clusterName = "R-worker-cluster",
+  clusterName = "docker-parallel-cluster",
   serverTaskDefName = "R-server-task-definition",
   workerTaskDefName = "R-worker-task-definition",
   securityGroupName = "R-parallel-security-group",
