@@ -63,6 +63,7 @@ getContainerJobQueueName <- function(taskDescription){
 }
 
 getTaskEnvironment <- function(clusterName, taskIds){
+    if(length(taskIds)==0) return(list())
     info <- ecs_describe_tasks(cluster = clusterName, tasks = taskIds)
     taskDefs <- info$tasks
     taskEnvs <- list()
@@ -74,12 +75,8 @@ getTaskEnvironment <- function(clusterName, taskIds){
     taskEnvs
 }
 
-findServerEnvironment <- function(clusterName, jobQueueName){
-    provider <- .getCloudProvider(cluster)
-    jobQueueName <- .getJobQueueName(cluster)
-    clusterName <- provider$clusterName
-
-    serverHandles <- listRunningServers(cluster)
+findServerEnvironment <- function(clusterName, jobQueueName, serverTaskDefName){
+    serverHandles <- listTasks(clusterName = clusterName, taskFamily = serverTaskDefName)
     if(!is.null(serverHandles)){
         info <- getTaskEnvironment(clusterName = clusterName, taskIds = serverHandles)
         idx <- c()
@@ -138,9 +135,10 @@ findWorkerHandles <- function(cluster){
         for(i in seq_along(info)){
             id <- names(info)[i]
             env <- info[[i]]
-            if(identical(env[["ECSFargateCloudJobQueueName"]], jobQueueName)&&
-               identical(env[["ECSFargateCloudServerSignature"]], serverSignature)){
-                workerNum <- as.numeric(env[["ECSFargateCloudWorkerNumber"]])
+            if(identical(env[["ECSFargateClusterJobQueueName"]], jobQueueName)&&
+               identical(env[["ECSFargateClusterServerSignature"]], serverSignature)&&
+               !is.null(env[["ECSFargateClusterWorkerNumber"]])){
+                workerNum <- as.numeric(env[["ECSFargateClusterWorkerNumber"]])
                 result <- c(result, rep(id, workerNum))
             }
         }
@@ -148,9 +146,8 @@ findWorkerHandles <- function(cluster){
     result
 }
 
-listRunningServers <- function(cluster){
-    provider <- .getCloudProvider(cluster)
-    serverHandle <- listTasks(provider$clusterName, taskFamily = provider$serverTaskDefName)
+listRunningServers <- function(clusterName, serverTaskDefName){
+    serverHandle <- listTasks(clusterName, taskFamily = serverTaskDefName)
     serverHandle
 }
 

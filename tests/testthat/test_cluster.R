@@ -4,24 +4,17 @@ clusterName <- "docker-parallel-test-cluster"
 serverTaskDefName <- "R-server-test-task-definition"
 workerTaskDefName <- "R-worker-test-task-definition"
 removeAllContainer <- function(clusterName, jobQueueName){
-    if(!clusterName%in%listClusters()){
+    if(!clusterName%in%ECSListClusters()){
         return()
     }
-    handles <- listTasks(clusterName)
-    runningWorkers <- NULL
-    if(!is.null(handles)){
-        info <- ecs_describe_tasks(cluster = clusterName, tasks = handles)
-        for(i in info$tasks){
-            env <- i$overrides$containerOverrides[[1]]$environment
-            env <- ArrayToList(env)
-            if(identical(env[["ECSFargateClusterJobQueueName"]], jobQueueName)){
-                runningWorkers <- c(runningWorkers, i$taskArn)
-                message(i$taskArn)
-            }
-        }
+    workerHandles <- ECSListWorkers(clusterName)
+    if(nrow(workerHandles)!=0){
+        ECSStopContainers(clusterName = clusterName, ids = workerHandles$id)
     }
-    if(!is.null(runningWorkers)){
-        stopTasks(clusterName = clusterName, taskIds = runningWorkers)
+
+    serverHandles <- ECSListServers(clusterName)
+    if(nrow(serverHandles)!=0){
+        ECSStopContainers(clusterName = clusterName, ids = serverHandles$id)
     }
 }
 
@@ -48,36 +41,45 @@ if(existCredentials()){
     container <-doRedisContainer::doRedisWorkerContainer()
 
     test_that("general test",{
-        DockerParallel::generalDockerClusterTest(
-            cloudProvider = provider,
-            workerContainer = container,
-            workerNumber = 5,
-            testReconnect = TRUE,
-            jobQueueName = queueName,
-            verbose = verbose)
+        # DockerParallel::generalDockerClusterTest(
+        #     cloudProvider = provider$copy(),
+        #     workerContainer = container$copy(),
+        #     workerNumber = 5,
+        #     testReconnect = TRUE,
+        #     jobQueueName = queueName,
+        #     verbose = verbose)
     })
 
     # We will enable this test after the required packages have been submitted to CRAN
     test_that("The cluster", {
-        cluster <- makeDockerCluster(cloudProvider = provider,
-                                     workerContainer = container,
+        cluster <- makeDockerCluster(cloudProvider = provider$copy(),
+                                     workerContainer = container$copy(),
                                      workerNumber = 1,
                                      jobQueueName = queueName,
                                      verbose = verbose)
-
+        cluster$workerContainer$setRPackages("Jiefei-Wang/ECSFargateProvider")
         expect_error(cluster$startCluster(), NA)
 
         library(foreach)
         # getDoParWorkers()
-        expect_error(
-            res <- foreach(i = 1:2) %dopar%{
-                Sys.info()
-            }
-            ,NA)
+        {
+            expect_error(
+                res <- foreach(i = 1:2) %dopar%{
+                    Sys.info()
+                }
+                ,NA)
+        }
         release <- lapply(res, function(x) x[["release"]])
 
         expect_equal(grep("amzn", release), 1:2)
         expect_error(cluster$stopCluster(), NA)
+    })
+
+    test_that("cleanup", {
+        workerHandles <- ECSListWorkers(clusterName)
+        expect_true(nrow(workerHandles)==0)
+        serverHandles <- ECSListServers(clusterName)
+        expect_true(nrow(serverHandles)==0)
     })
 
 }

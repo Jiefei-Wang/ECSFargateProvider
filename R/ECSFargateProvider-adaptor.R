@@ -292,6 +292,7 @@ setMethod("dockerClusterExists", "ECSFargateProvider",
           function(provider, cluster, verbose = 0L){
               jobQueueName <- .getJobQueueName(cluster)
               clusterName <- provider$clusterName
+              serverTaskDefName <- provider$serverTaskDefName
               ## Check if the cluster exists
               clusterList <- listClusters()
               if(!clusterName%in%clusterList){
@@ -301,8 +302,9 @@ setMethod("dockerClusterExists", "ECSFargateProvider",
               ## Check if the server exists
               serverEnv <- findServerEnvironment(
                   clusterName = clusterName,
-                  jobQueueName = jobQueueName)
-              !is.null(serverInfo)
+                  jobQueueName = jobQueueName,
+                  serverTaskDefName = serverTaskDefName)
+              !is.null(serverEnv)
           }
 )
 
@@ -323,21 +325,23 @@ setMethod("reconnectDockerCluster", "ECSFargateProvider",
               cloudConfig <- .getCloudConfig(cluster)
               jobQueueName <- .getJobQueueName(cluster)
               clusterName <- provider$clusterName
+              serverTaskDefName <- provider$serverTaskDefName
 
               serverEnv <- findServerEnvironment(
                   clusterName = clusterName,
-                  jobQueueName = jobQueueName)
+                  jobQueueName = jobQueueName,
+                  serverTaskDefName = serverTaskDefName)
               ## ask the user to select the server if multiple servers exist
               serverInfo <- selectServer(serverEnv)
               if(!is.null(serverInfo)){
                   ## Set the cloud config
                   provider$serverHandle <- serverInfo$serverHandle
                   clusterStaticData <- serverInfo$clusterStaticData
-                  setDockerStaticData(cluster, provider, clusterStaticData)
+                  setDockerStaticData(cluster, clusterStaticData)
 
                   ## Set the worker runtime
                   workerHandles <- findWorkerHandles(cluster)
-                  addManagedWorkerHandles(cluster, workerHandles)
+                  addManagedWorkerHandles(provider, workerHandles)
               }
           }
 )

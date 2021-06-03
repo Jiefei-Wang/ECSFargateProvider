@@ -4,25 +4,31 @@
 \alias{ECSListClusters}
 \alias{ECSListServers}
 \alias{ECSListWorkers}
-\title{List the cluster names, server or worker containers on ECS}
+\alias{ECSStopContainers}
+\title{Manage the cluster, server or worker containers on ECS}
 \usage{
 ECSListClusters()
 
 ECSListServers(clusterName = "docker-parallel-cluster")
 
 ECSListWorkers(clusterName = "docker-parallel-cluster")
+
+ECSStopContainers(ids, clusterName = "docker-parallel-cluster")
 }
 \arguments{
 \item{clusterName}{Character(1), the name of the cluster on ECS, you can call
 \code{listClusters} to confirm the cluster names.}
+
+\item{ids}{Character(1) The IDs of the containers.}
 }
 \value{
 \code{ECSListClusters}: A character vector of the cluster names
 \code{ECSListServers}: A data.frame with \code{id} and \code{jobQueueName} columns
 \code{ECSListWorkers}: A data.frame with \code{id}, \code{jobQueueName}, \code{workerNumber} and \code{serverSignature} columns
+\code{ECSStopContainers}: No return value
 }
 \description{
-List the cluster names, server or worker containers on ECS. The \code{serverSignature} returned by
+Manage the cluster, server or worker containers on ECS. The \code{serverSignature} returned by
 \code{ECSListWorkers} is the server id if the server if provided by the ECS cloud provider
 or the server IP if the server if provided by the user.
 }

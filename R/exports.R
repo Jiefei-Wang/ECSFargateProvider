@@ -1,17 +1,19 @@
-#' List the cluster names, server or worker containers on ECS
+#' Manage the cluster, server or worker containers on ECS
 #'
-#' List the cluster names, server or worker containers on ECS. The `serverSignature` returned by
+#' Manage the cluster, server or worker containers on ECS. The `serverSignature` returned by
 #' `ECSListWorkers` is the server id if the server if provided by the ECS cloud provider
 #' or the server IP if the server if provided by the user.
 #'
 #' @param clusterName Character(1), the name of the cluster on ECS, you can call
 #' `listClusters` to confirm the cluster names.
+#' @param ids Character(1) The IDs of the containers.
 #'
 #' @rdname clusterInfo
 #' @returns
 #' `ECSListClusters`: A character vector of the cluster names
 #' `ECSListServers`: A data.frame with `id` and `jobQueueName` columns
 #' `ECSListWorkers`: A data.frame with `id`, `jobQueueName`, `workerNumber` and `serverSignature` columns
+#' `ECSStopContainers`: No return value
 #' @export
 ECSListClusters <- function(){
     listClusters()
@@ -63,4 +65,9 @@ ECSListWorkers <- function(clusterName = "docker-parallel-cluster"){
     res
 }
 
-
+#' @rdname clusterInfo
+#' @export
+ECSStopContainers <- function(ids, clusterName = "docker-parallel-cluster"){
+    if(length(ids)==0) return()
+    stopTasks(clusterName = clusterName, taskIds = ids)
+}
