@@ -41,6 +41,8 @@ public network}
 
 \item{logOptions}{Named list, the options for the log driver}
 
+\item{serverHandle}{Character, the server handle in ECS cluster}
+
 \item{region}{Character, the region of the ECS computing cluster}
 }
 \value{

@@ -15,10 +15,13 @@ RoxygenNote: 7.1.1
 Imports:
     aws.ecx,
     methods,
-    DockerParallel,
+    DockerParallel(>= 1.0.3),
     ManagedCloudProvider,
     jsonlite,
     utils,
     aws.iam
 Suggests: 
+    rmarkdown,
+    knitr,
     testthat
+VignetteBuilder: knitr

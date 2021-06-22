@@ -32,54 +32,53 @@ test_that("The constructor function", {
 })
 
 
-
-if(existCredentials()){
-    removeAllContainer(clusterName = clusterName, jobQueueName = queueName)
-    provider <- ECSFargateProvider(clusterName = clusterName,
-                                   serverTaskDefName = serverTaskDefName,
-                                   workerTaskDefName = workerTaskDefName)
-    container <-doRedisContainer::doRedisWorkerContainer()
-
-    test_that("general test",{
-        # DockerParallel::generalDockerClusterTest(
-        #     cloudProvider = provider$copy(),
-        #     workerContainer = container$copy(),
-        #     workerNumber = 5,
-        #     testReconnect = TRUE,
-        #     jobQueueName = queueName,
-        #     verbose = verbose)
-    })
-
-    # We will enable this test after the required packages have been submitted to CRAN
-    test_that("The cluster", {
-        cluster <- makeDockerCluster(cloudProvider = provider$copy(),
-                                     workerContainer = container$copy(),
-                                     workerNumber = 1,
-                                     jobQueueName = queueName,
-                                     verbose = verbose)
-        cluster$workerContainer$setRPackages("Jiefei-Wang/ECSFargateProvider")
-        expect_error(cluster$startCluster(), NA)
-
-        library(foreach)
-        # getDoParWorkers()
-        {
-            expect_error(
-                res <- foreach(i = 1:2) %dopar%{
-                    Sys.info()
-                }
-                ,NA)
-        }
-        release <- lapply(res, function(x) x[["release"]])
-
-        expect_equal(grep("amzn", release), 1:2)
-        expect_error(cluster$stopCluster(), NA)
-    })
-
-    test_that("cleanup", {
-        workerHandles <- ECSListWorkers(clusterName)
-        expect_true(nrow(workerHandles)==0)
-        serverHandles <- ECSListServers(clusterName)
-        expect_true(nrow(serverHandles)==0)
-    })
-
-}
+#
+# if(existCredentials()){
+#     removeAllContainer(clusterName = clusterName, jobQueueName = queueName)
+#     provider <- ECSFargateProvider(clusterName = clusterName,
+#                                    serverTaskDefName = serverTaskDefName,
+#                                    workerTaskDefName = workerTaskDefName)
+#     container <-doRedisContainer::doRedisWorkerContainer()
+#
+#     test_that("general test",{
+#         DockerParallel::generalDockerClusterTest(
+#             cloudProvider = provider$copy(),
+#             workerContainer = container$copy(),
+#             workerNumber = 5,
+#             testReconnect = TRUE,
+#             jobQueueName = queueName,
+#             verbose = verbose)
+#     })
+#
+#     # We will enable this test after the required packages have been submitted to CRAN
+#     test_that("The cluster", {
+#         cluster <- makeDockerCluster(cloudProvider = provider$copy(),
+#                                      workerContainer = container$copy(),
+#                                      workerNumber = 1,
+#                                      jobQueueName = queueName,
+#                                      verbose = verbose)
+#         cluster$workerContainer$setRPackages("Jiefei-Wang/ECSFargateProvider")
+#         expect_error(cluster$startCluster(), NA)
+#
+#         library(foreach)
+#         # getDoParWorkers()
+#         expect_error(
+#             res <- foreach(i = 1:2) %dopar%{
+#                 Sys.info()
+#             }
+#             ,NA)
+#         release <- lapply(res, function(x) x[["release"]])
+#
+#         expect_equal(grep("amzn", release), 1:2)
+#         expect_error(cluster$stopCluster(), NA)
+#     })
+#
+#     test_that("cleanup", {
+#         gc()
+#         workerHandles <- ECSListWorkers(clusterName)
+#         expect_true(nrow(workerHandles)==0)
+#         serverHandles <- ECSListServers(clusterName)
+#         expect_true(nrow(serverHandles)==0)
+#     })
+#
+# }

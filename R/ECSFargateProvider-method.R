@@ -15,6 +15,7 @@
 #' @param logDriver Character, the log driver, if `logDriver = "auto"`, the awslogs will be used
 #' @param logOptions Named list, the options for the log driver
 #' @param region Character, the region of the ECS computing cluster
+#' @param serverHandle Character, the server handle in ECS cluster
 #' @examples
 #' provider <- ECSFargateProvider()
 #' @return a `ECSFargateProvider` object
