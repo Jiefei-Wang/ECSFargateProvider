@@ -22,6 +22,7 @@ Imports:
     aws.iam
 Suggests: 
     rmarkdown,
+    markdown,
     knitr,
     testthat
 VignetteBuilder: knitr
